@@ -31,3 +31,4 @@ For example, a 800MB video cost more than 10 minutes at 1MB/s. 比如一个800MB
 
 ## Additional functions 附加功能
 1. Automatical download and combination of m3u8 steam files are supported. Simply click m3u8 URL and wait patiently. Downloaded videos are formatted as '.ts' files. 支持m3u8流视频的自动下载和拼接，只需要点击m3u8链接，耐心等待即可。下载的视频将会以'.ts'格式保存。
+2. Download bilibili videos. After click the icon, access the target website, change to flash mode and start to play. A 'flv' file will be on the resource list and click the resource URL. 下载b站视频。点击图标，转到目标网页。选择b站的flash播放器开始播放。此时选择资源列表的flv文件，单击该链接即可开始下载。
