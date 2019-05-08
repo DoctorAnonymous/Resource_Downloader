@@ -1,0 +1,22 @@
+{
+    "name": "Resource Downloader",
+    "permissions": ["activeTab", "webRequest", "\u003Call_urls>", "tabs"],
+    "version": "1.0",
+    "background":
+    {
+        "scripts": ["js/background.js"]
+    },
+    "browser_action":
+    {
+        "default_icon": "icon/JohnDoe.png",
+        "default_title": "Resource Downloader"
+    },
+    "icons":
+    {
+        "128": "icon/JohnDoe.png",
+        "16": "icon/JohnDoe.png",
+        "48": "icon/JohnDoe.png"
+    },
+    "description": "Download Network Resources from Current Tab.",
+    "manifest_version": 2
+}
