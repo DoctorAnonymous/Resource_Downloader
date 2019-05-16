@@ -48,27 +48,68 @@ function handleEvent(details) {
             address.on('click', function() {
                 alert("Download task started. Please wait. ");
                 code = `
+function asyncPool(poolLimit, array, iteratorFn) {
+    let i = 0;
+    const ret = [];
+    const executing = [];
+    const enqueue = function() {
+        if (i === array.length) {
+            return Promise.resolve();
+        }
+        const item = array[i++];
+        const p = Promise.resolve().then(() => iteratorFn(item, array));
+        ret.push(p);
+        const e = p.then(() => executing.splice(executing.indexOf(e), 1));
+        executing.push(e);
+        let r = Promise.resolve();
+        if (executing.length >= poolLimit) {
+            r = Promise.race(executing);
+        }
+        return r.then(() => enqueue());
+    };
+    return enqueue().then(() => Promise.all(ret));
+}
+const tsDownload = function(tsFilename) {
+    return new Promise(function(resolve, reject) {
+        fetch('${tsURL}'.replace(/[-\\w]+?.ts/g, tsFilename)).then(response => response.blob()).then(blob => {
+            var reader = new FileReader();
+            reader.readAsArrayBuffer(blob);
+            reader.onload = function() {
+                resolve(this.result);
+            }
+        }).catch(() => {
+            fetch('${tsURL}'.replace(/[-\\w]+?.ts/g, tsFilename)).then(response => response.blob()).then(blob => {
+                var reader = new FileReader();
+                reader.readAsArrayBuffer(blob);
+                reader.onload = function() {
+                    resolve(this.result);
+                }
+            }).catch(() => { resolve(new ArrayBuffer()); })
+        })
+    })
+}
 var BlobReader = new FileReader();
 var m3u8Tuple;
 var tsPromise = [];
 BlobReader.onload = function() {
-    m3u8Tuple = this.result.match(/\\w+?.ts/g);
-    for (var i = 0; i < m3u8Tuple.length; i++) {
-        tsPromise[i] = new Promise(function(resolve, reject) {
-            fetch('${tsURL}'.replace(/\\w+?.ts/g, m3u8Tuple[i])).then(response => response.blob()).then(blob => {
-                var reader = new FileReader();
-                reader.readAsArrayBuffer(blob);
-                reader.onload = function() { 
-                    resolve(this.result); }
-            })
+    m3u8Tuple = this.result.match(/[-\\w]+?.ts/g);
+    for (let i = 0; i < (m3u8Tuple.length) / 400; i++) {
+        let j = i;
+        asyncPool(1, m3u8Tuple.slice(i * 400, i * 400 + 400), tsDownload).then(values => {
+            console.log(values);
+            a = document.createElement('a');
+            a.href = window.URL.createObjectURL(new Blob(values));
+            a.download = i + ".ts";
+            a.click();
         })
     }
-    Promise.all(tsPromise).then(values => {
-        a = document.createElement('a');
-        a.href = window.URL.createObjectURL(new Blob(values));
-        a.download = "video.ts";
-        a.click();
-    })
+        /*asyncPool(5, m3u8Tuple.slice(400, 1000), tsDownload).then(values => {
+            console.log(values);
+            a = document.createElement('a');
+            a.href = window.URL.createObjectURL(new Blob(values));
+            a.download = "3.ts";
+            a.click();
+        })*/
 }
 fetch('${this.innerText}').then(response => response.blob()).then(blob => { BlobReader.readAsText(blob) })`;
                 console.log(code);
