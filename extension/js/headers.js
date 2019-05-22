@@ -87,7 +87,7 @@ const tsDownload = function(tsFilename) {
 
 const fragDownload = function(fragName) {
     return new Promise(function(resolve, reject) {
-        asyncPool(6, fragName[0], tsDownload).then(values => {
+        asyncPool(3, fragName[0], tsDownload).then(values => {
             console.log(values);
             let a = document.createElement('a');
             a.href = window.URL.createObjectURL(new Blob(values));
