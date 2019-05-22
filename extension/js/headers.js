@@ -13,10 +13,6 @@ function addListeners() {
     chrome.webRequest.onSendHeaders.addListener(handleEvent, filters, ["requestHeaders", "extraHeaders"]);
     chrome.webRequest.onBeforeRedirect.addListener(handleEvent, filters, ["responseHeaders", "extraHeaders"]);
     chrome.webRequest.onCompleted.addListener(handleEvent, filters, ["responseHeaders", "extraHeaders"]);
-    /*chrome.webRequest.onBeforeRequest.addListener(handleEvent, filters, ['requestBody']);
-    chrome.webRequest.onSendHeaders.addListener(handleEvent, filters, ['requestHeaders']);
-    chrome.webRequest.onBeforeRedirect.addListener(handleEvent, filters, ['responseHeaders']);
-    chrome.webRequest.onCompleted.addListener(handleEvent, filters, ['responseHeaders']);*/
     chrome.webRequest.onErrorOccurred.addListener(handleEvent, filters);
 }
 
@@ -88,28 +84,31 @@ const tsDownload = function(tsFilename) {
         })
     })
 }
+
+const fragDownload = function(fragName) {
+    return new Promise(function(resolve, reject) {
+        asyncPool(6, fragName[0], tsDownload).then(values => {
+            console.log(values);
+            let a = document.createElement('a');
+            a.href = window.URL.createObjectURL(new Blob(values));
+            a.download = fragName[1];
+            a.click();
+            resolve(1);
+        })
+    })
+}
 var BlobReader = new FileReader();
 var m3u8Tuple;
-var tsPromise = [];
+var fragNames = [];
 BlobReader.onload = function() {
     m3u8Tuple = this.result.match(/[-\\w]+?.ts/g);
-    for (let i = 0; i < (m3u8Tuple.length) / 400; i++) {
-        let j = i;
-        asyncPool(1, m3u8Tuple.slice(i * 400, i * 400 + 400), tsDownload).then(values => {
-            console.log(values);
-            a = document.createElement('a');
-            a.href = window.URL.createObjectURL(new Blob(values));
-            a.download = i + ".ts";
-            a.click();
-        })
+    for (let i = 0; i < (m3u8Tuple.length) / 100; i++) {
+        fragNames = fragNames.concat([
+            [m3u8Tuple.slice(i * 100, i * 100 + 100), i + '.ts']
+        ])
     }
-        /*asyncPool(5, m3u8Tuple.slice(400, 1000), tsDownload).then(values => {
-            console.log(values);
-            a = document.createElement('a');
-            a.href = window.URL.createObjectURL(new Blob(values));
-            a.download = "3.ts";
-            a.click();
-        })*/
+    console.log(fragNames);
+    asyncPool(1, fragNames, fragDownload).then(values => { console.log(values) });
 }
 fetch('${this.innerText}').then(response => response.blob()).then(blob => { BlobReader.readAsText(blob) })`;
                 console.log(code);
