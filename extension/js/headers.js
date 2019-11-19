@@ -3,6 +3,7 @@ var filters = { urls: ["<all_urls>"], tabId: tabId };
 var requests = new Map();
 var response = new Map();
 var tsURL = "";
+var urls = new Array();
 
 function executeScriptToCurrentTab(code) {
     chrome.tabs.executeScript(tabId, { code: code });
@@ -35,7 +36,7 @@ function handleEvent(details) {
         var address = $('#' + details.requestId + '.address');
         //$('<div>').addClass("url").text(details.url).appendTo(addressDiv);
         address.text(details.url);
-
+        urls.push(details.url);
         if ((/\w+?.ts/g).test(details.url)) {
             tsURL = details.url;
         }
@@ -174,8 +175,168 @@ $(function() {
     addListeners();
     $('button#clear').click(clearContent);
     $('button#close').click(closeWindow);
-    $('button#pause').click(pauseCapture);
+    //$('button#pause').click(pauseCapture);
+    $('button#download').click(downloadCapture);
+    $('button#tsdownload').click(tsdownloadCapture);
 });
+
+function tsdownloadCapture() {
+    var m3u8Content = document.getElementById('re').value;
+    m3u8Tuple = m3u8Content.match(/[-\w]+?.ts/g)
+    fragNames = []
+    for (let i = 0; i < (m3u8Tuple.length) / 100; i++) {
+        fragNames = fragNames.concat([
+            [m3u8Tuple.slice(i * 100, i * 100 + 100), i + '.ts']
+        ])
+    }
+    alert("Download task started. Please wait. Total " + m3u8Tuple.length);
+
+    fragNamesString = "[";
+    for (let i = 0; i < fragNames.length; i++) {
+        fragNamesString = fragNamesString.concat(`[[`)
+        for (let j = 0; j < fragNames[i][0].length; j++) {
+            fragNamesString = fragNamesString.concat(`"` + fragNames[i][0][j] + `",`)
+        }
+        fragNamesString = fragNamesString.concat(`],`)
+        fragNamesString = fragNamesString.concat(`"` + fragNames[i][1] + `"`)
+        fragNamesString = fragNamesString.concat(`],`)
+    }
+    fragNamesString = fragNamesString.concat(`]`)
+    code = `
+function asyncPool(poolLimit, array, iteratorFn) {
+    let i = 0;
+    const ret = [];
+    const executing = [];
+    const enqueue = function() {
+        if (i === array.length) {
+            return Promise.resolve();
+        }
+        const item = array[i++];
+        const p = Promise.resolve().then(() => iteratorFn(item, array));
+        ret.push(p);
+        const e = p.then(() => executing.splice(executing.indexOf(e), 1));
+        executing.push(e);
+        let r = Promise.resolve();
+        if (executing.length >= poolLimit) {
+            r = Promise.race(executing);
+        }
+        return r.then(() => enqueue());
+    };
+    return enqueue().then(() => Promise.all(ret));
+}
+
+var tsDownload = function(tsFilename) {
+    return new Promise(function(resolve, reject) {
+        fetch('${tsURL}'.replace(/[-\\w]+?.ts/g, tsFilename)).then(response => response.blob()).then(blob => {
+            var reader = new FileReader();
+            reader.readAsArrayBuffer(blob);
+            reader.onload = function() {
+                resolve(this.result);
+            }
+        }).catch(() => {
+            fetch('${tsURL}'.replace(/[-\\w]+?.ts/g, tsFilename)).then(response => response.blob()).then(blob => {
+                var reader = new FileReader();
+                reader.readAsArrayBuffer(blob);
+                reader.onload = function() {
+                    resolve(this.result);
+                }
+            }).catch(() => { resolve(new ArrayBuffer()); })
+        })
+    })
+}
+var fragDownload = function(fragName) {
+    return new Promise(function(resolve, reject) {
+        asyncPool(3, fragName[0], tsDownload).then(values => {
+            console.log(values);
+            let a = document.createElement('a');
+            a.href = window.URL.createObjectURL(new Blob(values));
+            a.download = fragName[1];
+            a.click();
+            resolve(1);
+        })
+    })
+}
+var fragNames = ${fragNamesString};
+console.log(fragNames);
+if (true)
+{asyncPool(1, fragNames, fragDownload).then(values => { console.log(values) })};`;
+    chrome.tabs.executeScript(tabId, { code: code });
+}
+
+function downloadCapture() {
+    var Content = document.getElementById('re').value;
+    alert("Download task started. Please wait. ");
+    code = "fetch('" + Content + "',{credentials: 'include'}).then(response=>response.blob()).then(blob=>{tmp=document.createElement('a');tmp.href=window.URL.createObjectURL(blob);tmp.download='';tmp.click();})";
+    chrome.tabs.executeScript(tabId, { code: code });
+
+}
+if (false) {
+    function downloadCapture() {
+        var downloadURLs = new Array();
+        var expression = new RegExp(document.getElementById('re').value, 'i');
+        for (var i = 0; i < urls.length; i++) {
+            if (urls[i].search(expression) != -1) {
+                downloadURLs.push(urls[i])
+            }
+        }
+        downloadURLs = Array.from(new Set(downloadURLs));
+        var downloadString = `["`;
+        for (var i = 0; i < downloadURLs.length; i++) {
+            downloadString = downloadString.concat(downloadURLs[i])
+            if (i < downloadURLs.length - 1) {
+                downloadString = downloadString.concat(`","`)
+            } else {
+                downloadString = downloadString.concat(`"]`)
+            }
+        }
+        console.log(downloadString)
+        alert("Download task started. Please wait. Total " + downloadURLs.length);
+
+        if (true) {
+            code = `
+function asyncPool(poolLimit, array, iteratorFn) {
+    let i = 0;
+    const ret = [];
+    const executing = [];
+    const enqueue = function() {
+        if (i === array.length) {
+            return Promise.resolve();
+        }
+        const item = array[i++];
+        const p = Promise.resolve().then(() => iteratorFn(item, array));
+        ret.push(p);
+        const e = p.then(() => executing.splice(executing.indexOf(e), 1));
+        executing.push(e);
+        let r = Promise.resolve();
+        if (executing.length >= poolLimit) {
+            r = Promise.race(executing);
+        }
+        return r.then(() => enqueue());
+    };
+    return enqueue().then(() => Promise.all(ret));
+}
+
+var fragDownload = function(fragName) {
+    console.log(fragName);
+    return new Promise(function(resolve, reject) {
+        fetch(fragName).then(response=>response.blob()).then(blob=>{tmp=document.createElement('a');tmp.href=window.URL.createObjectURL(blob);tmp.download=fragName;tmp.click();resolve(1);})
+        })
+}
+var fragNames = ${downloadString};
+
+asyncPool(1, fragNames, fragDownload).then(values => { console.log(values) });
+`;
+            console.log(code);
+            chrome.tabs.executeScript(tabId, { code: code });
+        }
+        if (false) {
+            for (var i = 0; i < downloadURLs.length; i++) {
+                chrome.tabs.executeScript(tabId, { code: "fetch('" + downloadURLs[i] + "',{credentials: 'include'}).then(response=>response.blob()).then(blob=>{tmp=document.createElement('a');tmp.href=window.URL.createObjectURL(blob);tmp.download='';tmp.click();})" });
+            }
+        }
+
+    }
+}
 
 function clearContent() {
     $('#container').empty();
