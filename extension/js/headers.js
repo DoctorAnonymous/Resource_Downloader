@@ -173,10 +173,11 @@ function formatHeaders(headers) {
 
 $(function() {
     addListeners();
-    $('button#clear').click(clearContent);
-    $('button#close').click(closeWindow);
+    //$('button#clear').click(clearContent);
+    //$('button#close').click(closeWindow);
     //$('button#pause').click(pauseCapture);
     $('button#download').click(downloadCapture);
+    $('button#redownload').click(redownloadCapture);
     $('button#tsdownload').click(tsdownloadCapture);
 });
 
@@ -270,30 +271,31 @@ function downloadCapture() {
     chrome.tabs.executeScript(tabId, { code: code });
 
 }
-if (false) {
-    function downloadCapture() {
-        var downloadURLs = new Array();
-        var expression = new RegExp(document.getElementById('re').value, 'i');
-        for (var i = 0; i < urls.length; i++) {
-            if (urls[i].search(expression) != -1) {
-                downloadURLs.push(urls[i])
-            }
-        }
-        downloadURLs = Array.from(new Set(downloadURLs));
-        var downloadString = `["`;
-        for (var i = 0; i < downloadURLs.length; i++) {
-            downloadString = downloadString.concat(downloadURLs[i])
-            if (i < downloadURLs.length - 1) {
-                downloadString = downloadString.concat(`","`)
-            } else {
-                downloadString = downloadString.concat(`"]`)
-            }
-        }
-        console.log(downloadString)
-        alert("Download task started. Please wait. Total " + downloadURLs.length);
 
-        if (true) {
-            code = `
+function redownloadCapture() {
+    var downloadURLs = new Array();
+    var expression = new RegExp(document.getElementById('re').value, 'i');
+    for (var i = 0; i < urls.length; i++) {
+        if (urls[i].search(expression) != -1) {
+            console.log(urls[i].search(expression))
+            downloadURLs.push(urls[i])
+        }
+    }
+    downloadURLs = Array.from(new Set(downloadURLs));
+    var downloadString = `["`;
+    for (var i = 0; i < downloadURLs.length; i++) {
+        downloadString = downloadString.concat(downloadURLs[i])
+        if (i < downloadURLs.length - 1) {
+            downloadString = downloadString.concat(`","`)
+        } else {
+            downloadString = downloadString.concat(`"]`)
+        }
+    }
+    console.log(downloadString)
+    alert("Download task started. Please wait. Total " + downloadURLs.length);
+
+    if (true) {
+        code = `
 function asyncPool(poolLimit, array, iteratorFn) {
     let i = 0;
     const ret = [];
@@ -326,17 +328,17 @@ var fragNames = ${downloadString};
 
 asyncPool(1, fragNames, fragDownload).then(values => { console.log(values) });
 `;
-            console.log(code);
-            chrome.tabs.executeScript(tabId, { code: code });
-        }
-        if (false) {
-            for (var i = 0; i < downloadURLs.length; i++) {
-                chrome.tabs.executeScript(tabId, { code: "fetch('" + downloadURLs[i] + "',{credentials: 'include'}).then(response=>response.blob()).then(blob=>{tmp=document.createElement('a');tmp.href=window.URL.createObjectURL(blob);tmp.download='';tmp.click();})" });
-            }
-        }
-
+        console.log(code);
+        chrome.tabs.executeScript(tabId, { code: code });
     }
+    if (false) {
+        for (var i = 0; i < downloadURLs.length; i++) {
+            chrome.tabs.executeScript(tabId, { code: "fetch('" + downloadURLs[i] + "',{credentials: 'include'}).then(response=>response.blob()).then(blob=>{tmp=document.createElement('a');tmp.href=window.URL.createObjectURL(blob);tmp.download='';tmp.click();})" });
+        }
+    }
+
 }
+
 
 function clearContent() {
     $('#container').empty();
