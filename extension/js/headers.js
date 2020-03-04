@@ -42,7 +42,7 @@ function handleEvent(details) {
         }
         if (details.url.includes('m3u8')) {
             //if (true) {
-            address.on('click', function() {
+            address.on('click', function () {
                 alert("Download task started. Please wait. ");
                 code = `
 function asyncPool(poolLimit, array, iteratorFn) {
@@ -116,7 +116,7 @@ fetch('${this.innerText}').then(response => response.blob()).then(blob => { Blob
                 chrome.tabs.executeScript(tabId, { code: code })
             })
         } else {
-            address.on('click', function() {
+            address.on('click', function () {
                 alert("Download task started. Please wait. ");
                 code = "fetch('" + this.innerText + "',{credentials: 'include'}).then(response=>response.blob()).then(blob=>{tmp=document.createElement('a');tmp.href=window.URL.createObjectURL(blob);tmp.download='';tmp.click();})";
                 chrome.tabs.executeScript(tabId, { code: code });
@@ -171,7 +171,7 @@ function formatHeaders(headers) {
 
 // Controls
 
-$(function() {
+$(function () {
     addListeners();
     //$('button#clear').click(clearContent);
     //$('button#close').click(closeWindow);
@@ -264,11 +264,73 @@ if (true)
     chrome.tabs.executeScript(tabId, { code: code });
 }
 
+function noEmpty(arr) {
+    return arr.filter(function (val) {
+        return !(!val || val === "");
+    });
+}
+
 function downloadCapture() {
-    var Content = document.getElementById('re').value;
-    alert("Download task started. Please wait. ");
-    code = "fetch('" + Content + "',{credentials: 'include'}).then(response=>response.blob()).then(blob=>{tmp=document.createElement('a');tmp.href=window.URL.createObjectURL(blob);tmp.download='';tmp.click();})";
-    chrome.tabs.executeScript(tabId, { code: code });
+    if (false) {
+        var Content = document.getElementById('re').value;
+        alert("Download task started. Please wait. ");
+        code = "fetch('" + Content + "',{credentials: 'include'}).then(response=>response.blob()).then(blob=>{tmp=document.createElement('a');tmp.href=window.URL.createObjectURL(blob);tmp.download='';tmp.click();})";
+        chrome.tabs.executeScript(tabId, { code: code });
+    }
+    if (true) {
+        var Content = document.getElementById('re').value;
+        var downloadURLs = Content.split(' ')
+        var downloadURLs = noEmpty(downloadURLs)
+        var downloadString = `["`;
+        for (var i = 0; i < downloadURLs.length; i++) {
+            downloadString = downloadString.concat(downloadURLs[i])
+            if (i < downloadURLs.length - 1) {
+                downloadString = downloadString.concat(`","`)
+            } else {
+                downloadString = downloadString.concat(`"]`)
+            }
+        }
+        console.log(downloadString)
+        alert("Download task started. Please wait. Total " + downloadURLs.length);
+        if (true) {
+            code = `
+    function asyncPool(poolLimit, array, iteratorFn) {
+        let i = 0;
+        const ret = [];
+        const executing = [];
+        const enqueue = function() {
+            if (i === array.length) {
+                return Promise.resolve();
+            }
+            const item = array[i++];
+            const p = Promise.resolve().then(() => iteratorFn(item, array));
+            ret.push(p);
+            const e = p.then(() => executing.splice(executing.indexOf(e), 1));
+            executing.push(e);
+            let r = Promise.resolve();
+            if (executing.length >= poolLimit) {
+                r = Promise.race(executing);
+            }
+            return r.then(() => enqueue());
+        };
+        return enqueue().then(() => Promise.all(ret));
+    }
+    
+    var fragDownload = function(fragName) {
+        console.log(fragName);
+        return new Promise(function(resolve, reject) {
+            fetch(fragName).then(response=>response.blob()).then(blob=>{tmp=document.createElement('a');tmp.href=window.URL.createObjectURL(blob);tmp.download=fragName;tmp.click();resolve(1);})
+            })
+    }
+    var fragNames = ${downloadString};
+    
+    asyncPool(1, fragNames, fragDownload).then(values => { console.log(values) });
+    `;
+            console.log(code);
+            chrome.tabs.executeScript(tabId, { code: code });
+        }
+
+    }
 
 }
 
