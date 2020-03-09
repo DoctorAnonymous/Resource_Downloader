@@ -66,7 +66,7 @@ function asyncPool(poolLimit, array, iteratorFn) {
     };
     return enqueue().then(() => Promise.all(ret));
 }
-const tsDownload = function(tsFilename) {
+tsDownload = function(tsFilename) {
     return new Promise(function(resolve, reject) {
         fetch('${tsURL}'.replace(/[-\\w]+?.ts/g, tsFilename)).then(response => response.blob()).then(blob => {
             var reader = new FileReader();
@@ -86,7 +86,7 @@ const tsDownload = function(tsFilename) {
     })
 }
 
-const fragDownload = function(fragName) {
+fragDownload = function(fragName) {
     return new Promise(function(resolve, reject) {
         asyncPool(3, fragName[0], tsDownload).then(values => {
             console.log(values);
